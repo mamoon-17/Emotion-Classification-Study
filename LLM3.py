@@ -18,16 +18,16 @@ from transformers import (
 )
 
 # ============================================================
-# Config - tuned for better accuracy
+# Config - stronger model + tweaks for better accuracy
 # ============================================================
 
-# Stronger encoder than distilroberta-base
-MODEL_NAME = "roberta-base"     # if you get OOM, switch back to "distilroberta-base"
+# DeBERTa-v3-base tends to outperform RoBERTa-base on many NLP tasks
+MODEL_NAME = "microsoft/deberta-v3-base"   # if you get OOM, switch back to "roberta-base"
 
-MAX_LENGTH = 384                # more of each lyric is visible to the model
-BATCH_SIZE = 16                 # if OOM, change this to 8
-EPOCHS = 6                      # more training than before (3 -> 6)
-LR = 1e-5                       # lower LR = more stable fine-tuning
+MAX_LENGTH = 384                # 384 tokens per lyric
+BATCH_SIZE = 8                  # smaller batch to avoid OOM on Colab T4
+EPOCHS = 8                      # a bit more training than 6
+LR = 1e-5                       # stable LR for base-size encoder
 WARMUP_RATIO = 0.05             # warmup steps as fraction of total
 SEED = 42
 
@@ -67,7 +67,7 @@ def main():
     id2label = {i: label for label, i in label2id.items()}
     print("Label mapping:", label2id)
 
-    # Stratified split: same idea as your LR baseline
+    # Stratified split: same idea as LR baseline
     train_df, test_df = train_test_split(
         df,
         test_size=0.2,
@@ -154,8 +154,9 @@ def main():
         num_training_steps=total_steps
     )
 
-    # dataset is perfectly balanced, so basic CE loss is fine
-    loss_fn = nn.CrossEntropyLoss()
+    # Label smoothing can help with overconfident wrong predictions
+    # and typically improves macro F1 for imbalanced/confusing classes
+    loss_fn = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_f1 = 0.0
     best_state_dict = None
@@ -217,11 +218,11 @@ def main():
     print(f"\n📊 Final Test Accuracy: {acc:.4f}")
     print(f"📊 Final Test Macro F1: {f1:.4f}")
 
-    print("\n📄 Classification Report (LLM - RoBERTa):")
+    print("\n📄 Classification Report (LLM - DeBERTa-v3-base):")
     print(classification_report(y_true, y_pred, target_names=label_list))
 
     # Save model
-    save_path = "./llm_lyrics_mood_roberta"
+    save_path = "./llm_lyrics_mood_deberta_v3_base"
     print(f"\n💾 Saving fine-tuned model to {save_path}")
     model.save_pretrained(save_path)
     tokenizer.save_pretrained(save_path)
@@ -299,31 +300,172 @@ def predict_mood(text: str, model_path: str, id2label: dict):
 if __name__ == "__main__":
     main()
 
-# ✅ Epoch 6 finished. Avg loss: 0.3535
-# 📊 Val Accuracy: 0.7332 | Val Macro F1: 0.7202
-# ✨ New best model found! Macro F1 = 0.7202
+
+
+# 🚀 Epoch 1/8
+#   Step 1/1220 - loss: 1.4211
+#   Step 100/1220 - loss: 1.3940
+#   Step 200/1220 - loss: 1.3905
+#   Step 300/1220 - loss: 1.3883
+#   Step 400/1220 - loss: 1.3880
+#   Step 500/1220 - loss: 1.3867
+#   Step 600/1220 - loss: 1.3856
+#   Step 700/1220 - loss: 1.3784
+#   Step 800/1220 - loss: 1.3796
+#   Step 900/1220 - loss: 1.3745
+#   Step 1000/1220 - loss: 1.3672
+#   Step 1100/1220 - loss: 1.3583
+#   Step 1200/1220 - loss: 1.3506
+# ✅ Epoch 1 finished. Avg loss: 1.3481
+# 📊 Val Accuracy: 0.4320 | Val Macro F1: 0.4178
+# ✨ New best model found! Macro F1 = 0.4178
+
+# 🚀 Epoch 2/8
+#   Step 1/1220 - loss: 1.2565
+#   Step 100/1220 - loss: 1.2502
+#   Step 200/1220 - loss: 1.2423
+#   Step 300/1220 - loss: 1.2444
+#   Step 400/1220 - loss: 1.2346
+#   Step 500/1220 - loss: 1.2277
+#   Step 600/1220 - loss: 1.2235
+#   Step 700/1220 - loss: 1.2157
+#   Step 800/1220 - loss: 1.2087
+#   Step 900/1220 - loss: 1.2058
+#   Step 1000/1220 - loss: 1.1970
+#   Step 1100/1220 - loss: 1.1936
+#   Step 1200/1220 - loss: 1.1857
+# ✅ Epoch 2 finished. Avg loss: 1.1865
+# 📊 Val Accuracy: 0.5074 | Val Macro F1: 0.4866
+# ✨ New best model found! Macro F1 = 0.4866
+
+# 🚀 Epoch 3/8
+#   Step 1/1220 - loss: 1.1123
+#   Step 100/1220 - loss: 1.0657
+#   Step 200/1220 - loss: 1.0710
+#   Step 300/1220 - loss: 1.0654
+#   Step 400/1220 - loss: 1.0614
+#   Step 500/1220 - loss: 1.0529
+#   Step 600/1220 - loss: 1.0491
+#   Step 700/1220 - loss: 1.0421
+#   Step 800/1220 - loss: 1.0400
+#   Step 900/1220 - loss: 1.0341
+#   Step 1000/1220 - loss: 1.0270
+#   Step 1100/1220 - loss: 1.0228
+#   Step 1200/1220 - loss: 1.0179
+# ✅ Epoch 3 finished. Avg loss: 1.0161
+# 📊 Val Accuracy: 0.6238 | Val Macro F1: 0.6109
+# ✨ New best model found! Macro F1 = 0.6109
+
+# 🚀 Epoch 4/8
+#   Step 1/1220 - loss: 0.8593
+#   Step 100/1220 - loss: 0.8760
+#   Step 200/1220 - loss: 0.8771
+#   Step 300/1220 - loss: 0.8803
+#   Step 400/1220 - loss: 0.8654
+#   Step 500/1220 - loss: 0.8469
+#   Step 600/1220 - loss: 0.8444
+#   Step 700/1220 - loss: 0.8418
+#   Step 800/1220 - loss: 0.8401
+#   Step 900/1220 - loss: 0.8328
+#   Step 1000/1220 - loss: 0.8292
+#   Step 1100/1220 - loss: 0.8281
+#   Step 1200/1220 - loss: 0.8246
+# ✅ Epoch 4 finished. Avg loss: 0.8222
+# 📊 Val Accuracy: 0.6889 | Val Macro F1: 0.6833
+# ✨ New best model found! Macro F1 = 0.6833
+
+# 🚀 Epoch 5/8
+#   Step 1/1220 - loss: 1.4818
+#   Step 100/1220 - loss: 0.7198
+#   Step 200/1220 - loss: 0.7072
+#   Step 300/1220 - loss: 0.7078
+#   Step 400/1220 - loss: 0.6998
+#   Step 500/1220 - loss: 0.6969
+#   Step 600/1220 - loss: 0.6876
+#   Step 700/1220 - loss: 0.6887
+#   Step 800/1220 - loss: 0.6871
+#   Step 900/1220 - loss: 0.6837
+#   Step 1000/1220 - loss: 0.6826
+#   Step 1100/1220 - loss: 0.6789
+#   Step 1200/1220 - loss: 0.6776
+# ✅ Epoch 5 finished. Avg loss: 0.6771
+# 📊 Val Accuracy: 0.7307 | Val Macro F1: 0.7168
+# ✨ New best model found! Macro F1 = 0.7168
+
+# 🚀 Epoch 6/8
+#   Step 1/1220 - loss: 0.3747
+#   Step 100/1220 - loss: 0.5700
+#   Step 200/1220 - loss: 0.5783
+#   Step 300/1220 - loss: 0.5857
+#   Step 400/1220 - loss: 0.5840
+#   Step 500/1220 - loss: 0.5887
+#   Step 600/1220 - loss: 0.5854
+#   Step 700/1220 - loss: 0.5887
+#   Step 800/1220 - loss: 0.5898
+#   Step 900/1220 - loss: 0.5898
+#   Step 1000/1220 - loss: 0.5882
+#   Step 1100/1220 - loss: 0.5879
+#   Step 1200/1220 - loss: 0.5883
+# ✅ Epoch 6 finished. Avg loss: 0.5875
+# 📊 Val Accuracy: 0.7402 | Val Macro F1: 0.7282
+# ✨ New best model found! Macro F1 = 0.7282
+
+# 🚀 Epoch 7/8
+#   Step 1/1220 - loss: 0.3898
+#   Step 100/1220 - loss: 0.5172
+#   Step 200/1220 - loss: 0.5237
+#   Step 300/1220 - loss: 0.5285
+#   Step 400/1220 - loss: 0.5277
+#   Step 500/1220 - loss: 0.5300
+#   Step 600/1220 - loss: 0.5305
+#   Step 700/1220 - loss: 0.5321
+#   Step 800/1220 - loss: 0.5311
+#   Step 900/1220 - loss: 0.5321
+#   Step 1000/1220 - loss: 0.5321
+#   Step 1100/1220 - loss: 0.5306
+#   Step 1200/1220 - loss: 0.5302
+# ✅ Epoch 7 finished. Avg loss: 0.5303
+# 📊 Val Accuracy: 0.7414 | Val Macro F1: 0.7281
+
+# 🚀 Epoch 8/8
+#   Step 1/1220 - loss: 0.6082
+#   Step 100/1220 - loss: 0.4780
+#   Step 200/1220 - loss: 0.4812
+#   Step 300/1220 - loss: 0.4896
+#   Step 400/1220 - loss: 0.4883
+#   Step 500/1220 - loss: 0.4886
+#   Step 600/1220 - loss: 0.4924
+#   Step 700/1220 - loss: 0.4910
+#   Step 800/1220 - loss: 0.4917
+#   Step 900/1220 - loss: 0.4943
+#   Step 1000/1220 - loss: 0.4936
+#   Step 1100/1220 - loss: 0.4938
+#   Step 1200/1220 - loss: 0.4932
+# ✅ Epoch 8 finished. Avg loss: 0.4928
+# 📊 Val Accuracy: 0.7426 | Val Macro F1: 0.7299
+# ✨ New best model found! Macro F1 = 0.7299
 
 # 🧪 Final evaluation on test set (best epoch)...
 
-# 📊 Final Test Accuracy: 0.7332
-# 📊 Final Test Macro F1: 0.7202
+# 📊 Final Test Accuracy: 0.7426
+# 📊 Final Test Macro F1: 0.7299
 
-# 📄 Classification Report (LLM - RoBERTa):
+# 📄 Classification Report (LLM - DeBERTa-v3-base):
 #               precision    recall  f1-score   support
 
-#        anger       0.86      0.99      0.92       610
-#         calm       0.80      0.93      0.86       610
-#        happy       0.60      0.50      0.55       610
-#          sad       0.59      0.51      0.55       610
+#        anger       0.91      0.99      0.95       610
+#         calm       0.82      0.96      0.88       610
+#        happy       0.62      0.46      0.53       610
+#          sad       0.56      0.55      0.56       610
 
-#     accuracy                           0.73      2440
-#    macro avg       0.72      0.73      0.72      2440
-# weighted avg       0.72      0.73      0.72      2440
+#     accuracy                           0.74      2440
+#    macro avg       0.73      0.74      0.73      2440
+# weighted avg       0.73      0.74      0.73      2440
 
 
-# 💾 Saving fine-tuned model to ./llm_lyrics_mood_roberta
+# 💾 Saving fine-tuned model to ./llm_lyrics_mood_deberta_v3_base
 
 # 🔍 Example inference:
 # Text: I feel so alone, crying every night, nothing seems to matter anymore.
-# Predicted mood: anger
-# Probabilities: [0.87446916 0.00817451 0.02504792 0.09230837]
+# Predicted mood: sad
+# Probabilities: [0.03357365 0.02246075 0.04696979 0.8969959 ]
