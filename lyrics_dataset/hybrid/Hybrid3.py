@@ -1,6 +1,3 @@
-# If you're on Colab, run this once in a separate cell:
-# !pip install -q transformers datasets scikit-learn xgboost matplotlib
-
 from re import Match
 import time
 import numpy as np
