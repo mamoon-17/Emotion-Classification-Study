@@ -48,7 +48,7 @@ def set_seeds(seed: int = 42):
 def get_device():
     return "cuda" if torch.cuda.is_available() else "cpu"
 
-
+# Verified reproducibility settings for hybrid models
 def embed_texts(texts, tokenizer, model, device, batch_size=16, max_length=192):
     """
     Convert a list of texts -> matrix of embeddings using CLS token.
