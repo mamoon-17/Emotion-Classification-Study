@@ -57,6 +57,7 @@ def embed_texts(texts, tokenizer, model, device, batch_size=16, max_length=192):
     all_embs = []
     model.eval()
 
+#Refactor evaluation helpers and tidy metric logging
     with torch.no_grad():
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i:i + batch_size]
